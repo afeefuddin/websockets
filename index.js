@@ -2,6 +2,18 @@ const button = document.querySelector('.send');
 let id = ''
 
 
+function messageFromServer(text) {
+
+    const elem = document.querySelector('.messages');
+    const chat = document.createElement('div')
+    chat.textContent = text;
+
+    
+    elem.appendChild(chat);
+}
+
+
+
 fetch('http://localhost:6969').then((res)=>{
     return res.json()
 }).then(data=>{
@@ -17,7 +29,6 @@ button.addEventListener('click', () => {
 
 socket.onopen = (event) => {
     console.log('WebSocket connection opened');
-    socket.send('HELLO')
 };
 
 socket.addEventListener('message', (event) => {
@@ -28,12 +39,14 @@ socket.addEventListener('message', (event) => {
         reader.onload = function () {
             const text = reader.result;
             console.log('Message from server:', text);
+            messageFromServer(text)
         };
 
         reader.readAsText(event.data);
     } else {
         // If the message is not a Blob, log it as is
         console.log('Message from server:', event.data);
+        messageFromServer(event.data)
     }
 });
 

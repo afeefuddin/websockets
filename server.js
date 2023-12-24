@@ -1,42 +1,45 @@
-const WebSocket = require("ws");
+const express = require('express')
+const WebSocket = require('ws')
+const cors = require('cors')
+const app = express();
 
-const wss = new WebSocket.Server({ port: 8802 });
 
-const map = new Map()
-// uuid --> [connection id] //pair in this case
+app.use(express.json())
+app.use(express.urlencoded({extended:true}))
 
-let counter = 0;
+app.use(cors({
+    origin:'*'
+  }));
 
-wss.on("connection", async(ws,req) => {
-    const connectId = counter++;
-    console.log(connectId)
-    const params = new URLSearchParams(req.url.split('?')[1]);
-    const id=  params?.get('id')
-    console.log(params)
-    console.log(params?.get('id'))
-    if(map.has(id)){
-        map.get(id).push({connectId,ws})
-    }
-    else{
-        let arr = [{connectId,ws}]
-        map.set(id,arr)
-    }
-    console.log("New Client Connected");
-
-    ws.on('message', (data,isBinary) => {
-        const arr = map.get(id)
-        console.log(arr)
+app.get('/',(req,res)=>{
+    const number =  Math.floor(Math.random()*100)
+    res.status(200).send({'uuid':number})
+    const wss = new WebSocket(`ws://localhost:8802?id=${number}&server=true`)
+    wss.onopen= (event) =>{
+        console.log('Server Connected with a websocket')
+        wss.addEventListener('message',(event)=>{
+            if (event.data instanceof Blob) {
+                // If the message is a Blob, convert it to text
+                const reader = new FileReader();
+                
+                reader.onload = function () {
+                    const text = reader.result;
+                    console.log('Message from server:', text);
+                };
         
-        for(let i=0;i<arr.length;i++){
-            // console.log(arr)
-            console.log(arr[i]?.connectId + "here")
-            if(connectId!==arr[i]?.connectId)
-            arr[i]?.ws?.send(data,{binary : isBinary})
-        }
-        
-    });
+                reader.readAsText(event.data);
+            } else {
+                // If the message is not a Blob, log it as is
+                console.log('Message from server:', event.data);
+            }
+        })
+    }
+    setInterval(()=>{
+        wss.send(`Polling after 20 seconds from uuid ${number}`)
+    },1000*10)
+})
 
-    ws.on('close', () => {
-        console.log("Client disconnected");
-    });
-});
+app.listen(6969,()=>{
+    console.log("Server started")
+})
+
